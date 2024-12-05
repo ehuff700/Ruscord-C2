@@ -1,0 +1,8 @@
+[bot]
+token = "..."
+guild_id = 1234567890
+prefix = "..."
+
+[misc]
+internal_log_level = "info"
+external_log_level = "warn"
