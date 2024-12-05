@@ -1,26 +1,29 @@
 #![feature(async_closure)]
 mod utils;
+use commands::COMMANDS;
 pub use poise::serenity_prelude as serenity;
 use std::{ops::AsyncFnOnce, sync::Arc};
 use tokio::sync::{mpsc::Receiver, RwLock};
 
 mod error;
-use poise::{Framework, FrameworkOptions, PrefixFrameworkOptions};
+use poise::{Framework, FrameworkError, FrameworkOptions, PrefixFrameworkOptions};
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Layer, Registry};
 use utils::{
     config::{AgentConfig, EXTERNAL_LOG_LEVEL, GUILD_ID, INTERNAL_LOG_LEVEL, PREFIX, TOKEN},
     logging::{start_discord_logger, DiscordWriter},
 };
 
+mod commands;
 #[macro_use]
 extern crate tracing;
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Data {
     config: Arc<RwLock<AgentConfig>>,
 }
 
 impl Data {
+    /// Passes a read-only reference to the agent configuration to a function
     pub async fn config_read_op<F, Output>(&self, f: F) -> Output
     where
         F: FnOnce(&AgentConfig) -> Output,
@@ -32,6 +35,7 @@ impl Data {
         output
     }
 
+    /// Passes a mutable reference to the agent configuration to a function
     pub async fn config_write_op<F>(&self, f: F)
     where
         F: AsyncFnOnce(&mut AgentConfig),
@@ -40,8 +44,9 @@ impl Data {
         f(&mut *guard).await;
     }
 }
+
 pub type Error = crate::error::Error;
-pub type Context<'a> = poise::Context<'a, Data, Error>;
+pub type RuscordContext<'a> = poise::Context<'a, Data, Error>;
 pub type RuscordResult<T> = std::result::Result<T, Error>;
 
 fn setup_env_filter() -> EnvFilter {
@@ -83,8 +88,9 @@ pub async fn main() -> RuscordResult<()> {
     let intents = serenity::GatewayIntents::all();
     let framework = Framework::builder()
         .options(FrameworkOptions {
+            commands: COMMANDS.into_iter().map(|c| c()).collect(),
             // TODO: implement onerror
-            command_check: Some(|ctx: Context<'_>| {
+            command_check: Some(|ctx: RuscordContext<'_>| {
                 Box::pin(async move {
                     let data = ctx.data();
                     let result = data.config_read_op(|c| c.check(ctx.channel_id())).await;
@@ -94,6 +100,23 @@ pub async fn main() -> RuscordResult<()> {
             prefix_options: PrefixFrameworkOptions {
                 prefix: prefix.to_string().into(),
                 ..Default::default()
+            },
+            on_error: |error| {
+                Box::pin(async move {
+                    if let FrameworkError::CommandCheckFailed { error, ctx, .. } = error {
+                        let check = ctx.data().config_read_op(|c| c.check(ctx.channel_id()))
+                            .await;
+                        // If the framework error sources from this bot, then go ahead and print out the error.
+                        if check {
+                            if let Some(error) = error {
+                                error!("Command check failed: {}", error);
+                            }
+                            let _ = ctx.reply("Command not supported in this channel").await;
+                        }
+                    } else {
+                        error!("misc framework error: {:?}", error)
+                    }
+                })
             },
             ..Default::default()
         })

@@ -8,6 +8,7 @@ use tracing_subscriber::{filter::Directive, fmt::MakeWriter};
 use crate::RuscordResult;
 pub const DISCORD_MAX_MESSAGE_LENGTH: usize = 1999;
 
+
 #[derive(Debug, Clone, Copy)]
 pub enum LoggingLevel {
     Trace,

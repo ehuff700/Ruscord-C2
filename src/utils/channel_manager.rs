@@ -1,52 +1,18 @@
-use std::{ops::Deref, sync::Arc};
+use std::ops::Deref;
 
 use crate::utils::config::GUILD_ID;
+use crate::RuscordContext;
 use crate::{serenity::*, RuscordResult};
 
 #[repr(transparent)]
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ChannelManager(ChannelId);
 
 impl ChannelManager {
-    /// Creates a new channel
-    pub async fn new(
-        ctx: &Context,
-        name: &str,
-        kind: ChannelType,
-        parent_id: impl Into<Option<ChannelId>>,
-        description: impl Into<Option<&str>>,
-    ) -> RuscordResult<Self> {
-        let guild = GUILD_ID;
-        let parent_id = parent_id.into();
-        let description = description.into();
-
-        let description = description.map(|desc| {
-            if desc.len() >= 1024 {
-                warn!("Description is too long, truncating: {}", desc);
-                desc.get(..1023).unwrap_or(desc)
-            } else {
-                desc
-            }
-        });
-
-        let mut base_builder = CreateChannel::new(name).kind(kind);
-        if let Some(parent) = parent_id {
-            base_builder = base_builder.category(parent);
-        }
-        let builder = if let Some(description) = description {
-            base_builder.topic(description)
-        } else {
-            base_builder
-        };
-        let channel = guild.create_channel(ctx.http.clone(), builder).await?;
-
-        Ok(Self(channel.id))
-    }
-
     /// Deletes the channel and returns a new, refreshed one, with the same contents as the previous channel.
-    pub async fn refresh_channel(&mut self, ctx: &Context) -> RuscordResult<()> {
+    pub async fn refresh_channel(&mut self, ctx: &RuscordContext<'_>) -> RuscordResult<()> {
         let channel = self.id();
-        let new_channel = channel.delete(Arc::clone(&ctx.http)).await?;
+        let new_channel = channel.delete(ctx.http()).await?;
 
         // Safety: All channels created by this library are guild channels
         let guild_channel = unsafe { new_channel.guild().unwrap_unchecked() };
@@ -64,7 +30,7 @@ impl ChannelManager {
             channel_builder
         };
 
-        let new_channel = GUILD_ID.create_channel(&ctx.http, channel_builder).await?;
+        let new_channel = GUILD_ID.create_channel(ctx.http(), channel_builder).await?;
         *self = Self(new_channel.id);
         Ok(())
     }
