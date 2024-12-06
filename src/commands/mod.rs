@@ -1,14 +1,17 @@
 use crate::*;
+mod process;
 mod recon;
 mod utils;
-
 #[macro_export]
 macro_rules! say {
-    ($ctx:expr, $($args:tt)*) => {{
-        let message = format!($($args)*);
-        if let Err(why) = $ctx.say(message).await {
+    ($ctx:expr, $buffer:expr) => {{
+        if let Err(why) = $ctx.say($buffer).await {
             error!("Failed to send message: {}", why);
         }
+    }};
+    ($ctx:expr, $($args:tt)*) => {{
+        let message = format!($($args)*);
+        say!($ctx, message);
     }};
 }
 
@@ -82,9 +85,12 @@ pub const COMMANDS: &[fn() -> poise::Command<crate::Data, crate::Error>] = &[
     recon::config,
     recon::users,
     recon::sysinfo,
-    recon::ps,
     recon::ifconfig,
     recon::env,
+    process::ps,
+    process::pwd,
+    process::cd,
+    process::ls,
 ];
 
 /// Check which should be applied to all commands coming from the command chanel

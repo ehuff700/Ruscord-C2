@@ -1,7 +1,7 @@
-use std::{borrow::Cow, sync::LazyLock};
+use std::sync::LazyLock;
 
 use commands::command_channel_check;
-use sysinfo::{Pid, ProcessRefreshKind, RefreshKind, Users};
+use sysinfo::Users;
 use tabled::{settings::Style, Table, Tabled};
 
 use crate::*;
@@ -119,94 +119,6 @@ pub async fn sysinfo(ctx: RuscordContext<'_>) -> RuscordResult<()> {
 
     let table = Table::new(info).with(Style::modern()).to_string();
     reply_as_attachment!(ctx, "sysinfo.txt", table);
-    Ok(())
-}
-
-#[derive(poise::ChoiceParameter)]
-enum SortOrder {
-    Memory,
-    Name,
-    Pid,
-    Ppid,
-}
-
-#[derive(poise::ChoiceParameter)]
-enum SortDirection {
-    Ascending,
-    Descending,
-}
-
-#[poise::command(prefix_command, slash_command, check = command_channel_check)]
-/// Lists running processes
-pub async fn ps(
-    ctx: RuscordContext<'_>,
-    #[description = "Sort order for the process list"] sort_order: Option<SortOrder>,
-    #[description = "Sort direction for the process list"] sort_direction: Option<SortDirection>,
-) -> RuscordResult<()> {
-    let order = sort_order.unwrap_or(SortOrder::Name);
-    let direction = sort_direction.unwrap_or(SortDirection::Ascending);
-
-    #[derive(Tabled)]
-    struct ProcessInfo<'a> {
-        #[tabled(rename = "PPID")]
-        ppid: Pid,
-        #[tabled(rename = "PID")]
-        pid: &'a Pid,
-        #[tabled(rename = "Name")]
-        name: Cow<'a, str>,
-        #[tabled(rename = "Username")]
-        username: String,
-        #[tabled(rename = "Memory (B)")]
-        memory: f64,
-    }
-
-    let mut sys = sysinfo::System::new_with_specifics(
-        RefreshKind::nothing().with_processes(ProcessRefreshKind::everything()),
-    );
-    ctx.defer().await?;
-    sys.refresh_all();
-    let users = Users::new_with_refreshed_list();
-
-    let mut processes: Vec<_> = sys
-        .processes()
-        .iter()
-        .map(|(pid, proc)| {
-            let username = proc
-                .user_id()
-                .and_then(|uid| users.get_user_by_id(uid))
-                .map(|user| user.name().to_string())
-                .unwrap_or_else(|| String::from("Unavailable"));
-
-            ProcessInfo {
-                ppid: proc.parent().unwrap_or_else(|| Pid::from_u32(0)),
-                pid,
-                name: proc.name().to_string_lossy(),
-                username,
-                memory: proc.memory() as f64,
-            }
-        })
-        .collect();
-
-    // Sort the processes based on the selected order and direction
-    processes.sort_by(|a, b| {
-        let cmp = match order {
-            SortOrder::Memory => a
-                .memory
-                .partial_cmp(&b.memory)
-                .unwrap_or(std::cmp::Ordering::Equal),
-            SortOrder::Name => a.name.cmp(&b.name),
-            SortOrder::Pid => a.pid.cmp(b.pid),
-            SortOrder::Ppid => a.ppid.cmp(&b.ppid),
-        };
-
-        match direction {
-            SortDirection::Ascending => cmp,
-            SortDirection::Descending => cmp.reverse(),
-        }
-    });
-
-    let table = Table::new(processes).with(Style::modern()).to_string();
-    reply_as_attachment!(ctx, "processes.txt", table);
     Ok(())
 }
 
