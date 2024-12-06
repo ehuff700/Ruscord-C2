@@ -1,6 +1,5 @@
 use thiserror::Error;
 
-
 #[derive(Error, Debug)]
 /// Main error type for this crate.
 pub enum Error {

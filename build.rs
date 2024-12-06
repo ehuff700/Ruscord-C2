@@ -149,8 +149,8 @@ fn build_main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn main() {
-    //println!("cargo:rerun-if-changed=ruscord.toml");
-    //println!("cargo:rerun-if-changed=build.rs");
+    println!("cargo:rerun-if-changed=ruscord.toml");
+    println!("cargo:rerun-if-changed=build.rs");
     if let Err(why) = build_main() {
         panic!("{}", why);
     }

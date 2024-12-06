@@ -13,11 +13,14 @@ uuid = { version = "1.11.0", features = ["fast-rng", "serde", "v4"] }
 whoami = "1.4"
 local-ip-address = "0.6.3"
 chrono = "0.4.38"
+sysinfo = { version = "0.33.0" }
+tabled = "0.17.0"
 
 [build-dependencies]
 serde = { version = "1.0.215", features = ["derive"] }
 toml = "0.8.19"
 uuid = { version = "1.11.0", features = ["v4", "fast-rng"] }
 
-[dev-dependencies]
-base64 = "0.22.1"
+
+[patch.crates-io]
+sysinfo = { path = "../Fixing Other Peoples Stuff/sysinfo" }

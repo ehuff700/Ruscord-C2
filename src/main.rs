@@ -88,7 +88,7 @@ pub async fn main() -> RuscordResult<()> {
     let intents = serenity::GatewayIntents::all();
     let framework = Framework::builder()
         .options(FrameworkOptions {
-            commands: COMMANDS.into_iter().map(|c| c()).collect(),
+            commands: COMMANDS.iter().map(|c| c()).collect(),
             // TODO: implement onerror
             command_check: Some(|ctx: RuscordContext<'_>| {
                 Box::pin(async move {
@@ -103,8 +103,9 @@ pub async fn main() -> RuscordResult<()> {
             },
             on_error: |error| {
                 Box::pin(async move {
-                    if let FrameworkError::CommandCheckFailed { error, ctx, .. } = error {
-                        let check = ctx.data().config_read_op(|c| c.check(ctx.channel_id()))
+                    match error {
+                        FrameworkError::CommandCheckFailed { error, ctx, .. } => {
+                            let check = ctx.data().config_read_op(|c| c.check(ctx.channel_id()))
                             .await;
                         // If the framework error sources from this bot, then go ahead and print out the error.
                         if check {
@@ -113,8 +114,15 @@ pub async fn main() -> RuscordResult<()> {
                             }
                             let _ = ctx.reply("Command not supported in this channel").await;
                         }
-                    } else {
-                        error!("misc framework error: {:?}", error)
+                        },
+                        FrameworkError::Command { error, ctx, .. } => {
+                            let check = ctx.data().config_read_op(|c| c.check(ctx.channel_id()))
+                            .await;
+                        if check {
+                            let _ = ctx.reply(format!("Command failed: {}", error)).await;
+                        }
+                        },
+                        _ => error!("misc framework error: {:?}", error)
                     }
                 })
             },
