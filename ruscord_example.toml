@@ -1,8 +1,18 @@
 [bot]
+# The discord bot token
 token = "..."
+
+# The guild ID to connect to/register commands in
 guild_id = 1234567890
+
+# Prefix for commands
 prefix = "..."
 
 [misc]
+# Internal logging level of Ruscord C2
+# Possible values: "trace", "debug", "info", "warn", "error"
 internal_log_level = "info"
+
+# External logging level of crates outside of Ruscord C2
+# Possible values: "trace", "debug", "info", "warn", "error"
 external_log_level = "warn"

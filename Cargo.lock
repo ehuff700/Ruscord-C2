@@ -2545,6 +2545,7 @@ dependencies = [
 [[package]]
 name = "sysinfo"
 version = "0.33.0"
+source = "git+https://github.com/ehuff700/sysinfo.git#e568f4e41b3ccbd89f156eeb51bc42f424701a55"
 dependencies = [
  "core-foundation-sys",
  "libc",

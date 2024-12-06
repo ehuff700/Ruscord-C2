@@ -2,6 +2,10 @@
 name = "ruscord_c2"
 version = "0.1.0"
 edition = "2021"
+authors = ["Infamous <ehuff007@gmail.com>"]
+description = "A Command and Control (C2) framework written in Rust, using Discord infrastructure as a communication channel."
+repository = "https://github.com/ehuff700/Ruscord-C2"
+
 
 [dependencies]
 poise = "0.6.1"
@@ -27,4 +31,4 @@ uuid = { version = "1.11.0", features = ["v4", "fast-rng"] }
 
 
 [patch.crates-io]
-sysinfo = { path = "../Fixing Other Peoples Stuff/sysinfo" }
+sysinfo = { git = "https://github.com/ehuff700/sysinfo.git" }
