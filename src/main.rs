@@ -1,8 +1,7 @@
-#![feature(async_closure)]
 mod utils;
 use commands::COMMANDS;
 pub use poise::serenity_prelude as serenity;
-use std::{ops::AsyncFnOnce, sync::Arc};
+use std::sync::Arc;
 use tokio::sync::{mpsc::Receiver, RwLock};
 
 mod error;
@@ -34,25 +33,16 @@ impl Data {
         drop(guard);
         output
     }
-
-    /// Passes a mutable reference to the agent configuration to a function
-    pub async fn config_write_op<F>(&self, f: F)
-    where
-        F: AsyncFnOnce(&mut AgentConfig),
-    {
-        let mut guard = self.config.write().await;
-        f(&mut *guard).await;
-    }
 }
 
 pub type Error = crate::error::Error;
 pub type RuscordContext<'a> = poise::Context<'a, Data, Error>;
 pub type RuscordResult<T> = std::result::Result<T, Error>;
 
-fn setup_env_filter() -> EnvFilter {
+fn setup_env_filter(internal_log_level: &str) -> EnvFilter {
     EnvFilter::builder()
         .with_default_directive(EXTERNAL_LOG_LEVEL.into())
-        .parse(format!("ruscord_c2={}", INTERNAL_LOG_LEVEL.as_str()))
+        .parse(format!("ruscord_c2={}", internal_log_level))
         .unwrap()
 }
 
@@ -64,13 +54,13 @@ fn setup_logging() -> RuscordResult<Receiver<String>> {
         .with_writer(std::io::stdout)
         .with_ansi(true)
         .with_level(true)
-        .with_filter(setup_env_filter());
+        .with_filter(setup_env_filter(INTERNAL_LOG_LEVEL.as_str()));
 
     let discord_layer = tracing_subscriber::fmt::layer()
         .with_writer(DiscordWriter::new(log_sender))
         .with_ansi(false)
         .with_level(true)
-        .with_filter(setup_env_filter());
+        .with_filter(setup_env_filter("warn"));
 
     let subscriber = Registry::default().with(stdout_layer).with(discord_layer);
     tracing::subscriber::set_global_default(subscriber).expect("Set global default subscriber");
@@ -121,6 +111,18 @@ pub async fn main() -> RuscordResult<()> {
                         if check {
                             let _ = ctx.reply(format!("Command failed: {}", error)).await;
                         }
+                        },
+                        FrameworkError::CommandPanic { payload, ctx, .. } => {
+                            let check = ctx.data().config_read_op(|c| c.check(ctx.channel_id()))
+                            .await;
+                            if check {
+                                if let Some(payload) = payload {
+                                    reply_as_attachment!(ctx, "panic.txt", buffer: payload.as_bytes());
+                                } else {
+                                    say!(ctx, "Command panicked, but no payload was provided");
+                                }
+               
+                            }
                         },
                         _ => error!("misc framework error: {:?}", error)
                     }

